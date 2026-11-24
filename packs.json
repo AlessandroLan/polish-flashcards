@@ -1,0 +1,10 @@
+[
+  {
+    "id": "pl", "file": "vocab.json", "target": "pl", "base": "en", "ui": "en",
+    "flag": "🇵🇱", "name": "Polski", "title": "Learn Polish", "subtitle": "from English · your GoodNotes vocabulary"
+  },
+  {
+    "id": "it", "file": "it-pl.json", "target": "it", "base": "pl", "ui": "pl",
+    "flag": "🇮🇹", "name": "Italiano", "title": "Nauka włoskiego", "subtitle": "po polsku · poziomy A1–B1"
+  }
+]
