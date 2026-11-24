@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fiszki">
+<meta name="theme-color" content="#c8102e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Fiszki · Polish flashcards</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --fg: #1d1d1f; --muted: #6b6b70; --card: #ffffff;
+    --accent: #c8102e; --line: #e4e1da; --back: #fff7f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141416; --fg: #f2f2f4; --muted: #9a9aa2; --card: #1f1f23; --line: #2e2e34; --back: #2a1d20; --accent: #ff4d5e; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; min-height: 100dvh;
+    padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
+    user-select: none;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; gap: 12px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--accent); }
+  .modes { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .modes button {
+    border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600;
+    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  }
+  .modes button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .status { color: var(--muted); font-size: 13px; text-align: center; margin: 4px 0 12px; font-variant-numeric: tabular-nums; }
+  .bar { height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+  main { flex: 1; display: flex; flex-direction: column; justify-content: center; perspective: 1200px; }
+  .card {
+    position: relative; width: 100%; min-height: 52vh; cursor: pointer;
+    transform-style: preserve-3d; transition: transform .45s cubic-bezier(.2,.7,.2,1);
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .face {
+    position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px 22px; text-align: center;
+  }
+  .face.back { transform: rotateY(180deg); background: var(--back); }
+  .lang { position: absolute; top: 16px; left: 0; right: 0; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+  .word { font-size: clamp(28px, 8vw, 44px); font-weight: 700; line-height: 1.2; word-break: break-word; }
+  .note { margin-top: 14px; color: var(--muted); font-size: 15px; font-style: italic; }
+  .hint { position: absolute; bottom: 16px; color: var(--muted); font-size: 13px; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .actions button {
+    flex: 1; font: inherit; font-weight: 700; font-size: 17px; padding: 16px; border-radius: 16px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  }
+  .actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 2; }
+  .msg { text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fiszki <span>🇵🇱</span></h1>
+  <div class="modes" role="group" aria-label="Direction">
+    <button data-mode="mix">Mix</button>
+    <button data-mode="pl">PL→EN</button>
+    <button data-mode="en">EN→PL</button>
+  </div>
+</header>
+<div class="bar"><i id="bar"></i></div>
+<div class="status" id="status">Loading…</div>
+<main>
+  <div class="card" id="card" role="button" tabindex="0" aria-label="Flip card">
+    <div class="face front"><div class="lang" id="fLang"></div><div class="word" id="fWord"></div><div class="hint">tap to reveal</div></div>
+    <div class="face back"><div class="lang" id="bLang"></div><div class="word" id="bWord"></div><div class="note" id="bNote"></div></div>
+  </div>
+  <div class="actions">
+    <button id="flip">Flip</button>
+    <button id="next" class="primary">Next →</button>
+  </div>
+</main>
+<script>
+(() => {
+  const STORE = 'fiszki.v1';
+  const $ = id => document.getElementById(id);
+  let entries = [], cards = new Map(), state, showingBack = false;
+
+  const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
+  const save = () => localStorage.setItem(STORE, JSON.stringify(state));
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  // Every card in the current mode, keyed "<dir>|<polish>". Each appears exactly once per round,
+  // so all words have equal probability; rounds repeat forever with a fresh shuffle.
+  function keysForMode(mode) {
+    const dirs = mode === 'mix' ? ['pl', 'en'] : [mode];
+    return entries.flatMap(e => dirs.map(d => `${d}|${e.pl}`));
+  }
+
+  function newRound(prevLast) {
+    const bag = shuffle(keysForMode(state.mode));
+    if (bag.length > 1 && bag[0] === prevLast) [bag[0], bag[1]] = [bag[1], bag[0]];
+    state.bag = bag; state.pos = 0; state.round = (state.round || 0) + 1;
+  }
+
+  // Keep the current round when the vocabulary list changes: drop removed cards and slot
+  // new ones at random positions in the part of the round not yet seen.
+  function reconcile() {
+    const valid = new Set(keysForMode(state.mode));
+    if (!Array.isArray(state.bag)) return newRound();
+    const seen = state.bag.slice(0, state.pos).filter(k => valid.has(k));
+    const rest = state.bag.slice(state.pos).filter(k => valid.has(k));
+    const known = new Set([...seen, ...rest]);
+    for (const k of valid) if (!known.has(k)) rest.splice(Math.floor(Math.random() * (rest.length + 1)), 0, k);
+    state.bag = [...seen, ...rest]; state.pos = seen.length;
+    if (state.pos >= state.bag.length) newRound(state.bag[state.bag.length - 1]);
+  }
+
+  function render() {
+    const key = state.bag[state.pos];
+    const [dir, pl] = key.split('|');
+    const e = cards.get(pl);
+    const front = dir === 'pl' ? e.pl : e.en, back = dir === 'pl' ? e.en : e.pl;
+    $('fLang').textContent = dir === 'pl' ? 'Polish' : 'English';
+    $('bLang').textContent = dir === 'pl' ? 'English' : 'Polish';
+    $('fWord').textContent = front;
+    $('bWord').textContent = back;
+    $('bNote').textContent = e.note || '';
+    $('status').textContent = `Round ${state.round} · ${state.pos + 1} / ${state.bag.length} · ${entries.length} words`;
+    $('bar').style.width = `${(state.pos / state.bag.length) * 100}%`;
+    document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mode));
+  }
+
+  function setFlipped(v) { showingBack = v; $('card').classList.toggle('flipped', v); }
+  function flip() { setFlipped(!showingBack); }
+
+  function next() {
+    const last = state.bag[state.pos];
+    state.pos++;
+    if (state.pos >= state.bag.length) newRound(last);
+    save();
+    const go = () => { render(); };
+    if (showingBack) { setFlipped(false); setTimeout(go, 180); } else go();
+  }
+
+  function setMode(mode) {
+    if (mode === state.mode) return;
+    state.mode = mode; state.round = 0; newRound(); save(); setFlipped(false); render();
+  }
+
+  $('card').addEventListener('click', flip);
+  $('flip').addEventListener('click', flip);
+  $('next').addEventListener('click', next);
+  document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  document.addEventListener('keydown', ev => {
+    if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); flip(); }
+    if (ev.key === 'ArrowRight') next();
+  });
+  let x0 = null;
+  $('card').addEventListener('touchstart', ev => { x0 = ev.touches[0].clientX; }, { passive: true });
+  $('card').addEventListener('touchend', ev => {
+    if (x0 !== null && x0 - ev.changedTouches[0].clientX > 60) { ev.preventDefault(); next(); }
+    x0 = null;
+  });
+
+  fetch('vocab.json', { cache: 'no-cache' })
+    .then(r => r.json())
+    .then(list => {
+      // De-duplicate by Polish word (case-insensitive); later entries never override earlier ones.
+      const seen = new Set();
+      entries = list.filter(e => { const k = e.pl.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+      entries.forEach(e => cards.set(e.pl, e));
+      state = load();
+      if (!['mix', 'pl', 'en'].includes(state.mode)) state.mode = 'mix';
+      reconcile(); save(); render();
+    })
+    .catch(() => { $('status').textContent = 'Could not load vocabulary.'; });
+})();
+</script>
+</body>
+</html>
