@@ -14,159 +14,334 @@
 <style>
   :root {
     --bg: #f6f4ef; --fg: #1d1d1f; --muted: #6b6b70; --card: #ffffff;
-    --accent: #c8102e; --line: #e4e1da; --back: #fff7f8; --go: #1f9d55;
+    --accent: #c8102e; --line: #e4e1da; --back: #fff7f8; --go: #1f9d55; --warn: #d97706; --gold: #f5b301;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #141416; --fg: #f2f2f4; --muted: #9a9aa2; --card: #1f1f23; --line: #2e2e34; --back: #2a1d20; --accent: #ff4d5e; --go: #3ecf7e; }
+    :root { --bg: #141416; --fg: #f2f2f4; --muted: #9a9aa2; --card: #1f1f23; --line: #2e2e34; --back: #2a1d20; --accent: #ff4d5e; --go: #3ecf7e; --warn: #f59e0b; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; overflow: hidden; }
   body {
     background: var(--bg); color: var(--fg);
     font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    display: flex; flex-direction: column; height: 100dvh;
-    padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
+    height: 100dvh; padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
     user-select: none; -webkit-user-select: none;
   }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; gap: 12px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  [hidden] { display: none !important; }
+  .view { height: 100%; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; gap: 12px; min-height: 58px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
   h1 span { color: var(--accent); }
-  .modes { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
-  .modes button {
-    border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600;
-    padding: 6px 10px; border-radius: 999px; cursor: pointer;
-  }
-  .modes button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-  .status { color: var(--muted); font-size: 13px; text-align: center; margin: 4px 0 12px; font-variant-numeric: tabular-nums; }
-  .bar { height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
-  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s; }
-  main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 22px 0 10px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
 
-  /* The swiper moves/rotates with the finger; the card inside it flips. */
-  .swiper { position: relative; touch-action: pan-y; cursor: grab; will-change: transform; perspective: 1200px; }
-  .swiper.anim { transition: transform .32s cubic-bezier(.2,.7,.2,1), opacity .32s; }
-  .card {
-    position: relative; width: 100%; min-height: 52vh;
-    transform-style: preserve-3d; transition: transform .45s cubic-bezier(.2,.7,.2,1);
-  }
+  .seg { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+  .seg button { flex: 1; border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 15px; padding: 10px 6px; border-radius: 10px; white-space: nowrap; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 8px; text-align: center; }
+  .tile b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tile small { color: var(--muted); font-size: 12px; }
+
+  .list { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .list div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 15px; }
+  .list div:first-child { border-top: 0; }
+  .list i { color: var(--muted); font-style: normal; text-align: right; }
+  .list em { color: var(--warn); font-style: normal; font-weight: 700; margin-left: 6px; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 8px; }
+
+  .scroll { flex: 1; overflow-y: auto; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
+  .cta { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+  .big { border: 1px solid var(--line); background: var(--card); font-weight: 750; font-size: 18px; padding: 17px; border-radius: 18px; }
+  .big.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Play view */
+  .icon { border: 1px solid var(--line); background: var(--card); width: 40px; height: 40px; border-radius: 12px; font-size: 18px; }
+  .counters { display: flex; gap: 8px; align-items: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .chip { padding: 6px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 15px; }
+  .chip.ok { color: var(--go); } .chip.sk { color: var(--warn); }
+  .combo { color: var(--accent); font-weight: 800; transition: transform .2s; }
+  .combo.pop { transform: scale(1.35); }
+  .bar { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--go); width: 0; transition: width .25s; }
+  .status { color: var(--muted); font-size: 13px; text-align: center; margin: 6px 0 10px; font-variant-numeric: tabular-nums; display: flex; justify-content: center; gap: 10px; }
+  .stage { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .swiper { position: relative; touch-action: none; cursor: grab; will-change: transform; perspective: 1200px; }
+  .swiper.anim { transition: transform .26s cubic-bezier(.2,.7,.2,1), opacity .26s; }
+  .card { position: relative; width: 100%; min-height: 48vh; transform-style: preserve-3d; transition: transform .45s cubic-bezier(.2,.7,.2,1); }
   .card.instant { transition: none; }
   .card.flipped { transform: rotateY(180deg); }
   .face {
     position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.08);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 28px 22px; text-align: center;
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 22px; text-align: center;
   }
   .face.back { transform: rotateY(180deg); background: var(--back); }
   .lang { position: absolute; top: 16px; left: 0; right: 0; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
   .word { font-size: clamp(28px, 8vw, 44px); font-weight: 700; line-height: 1.2; word-break: break-word; }
   .pron { margin-top: 10px; color: var(--accent); font-size: 18px; font-weight: 500; letter-spacing: .02em; }
-  .pron:empty, .note:empty { display: none; }
+  .pron:empty, .note:empty, .retry:empty { display: none; }
   .note { margin-top: 14px; color: var(--muted); font-size: 15px; font-style: italic; }
   .hint { position: absolute; bottom: 16px; color: var(--muted); font-size: 13px; }
-
+  .retry { position: absolute; top: 14px; right: 16px; font-size: 12px; font-weight: 700; color: var(--warn); }
   .stamp {
-    position: absolute; top: 46px; z-index: 5; pointer-events: none; opacity: 0;
-    font-weight: 800; font-size: 26px; letter-spacing: .08em; padding: 4px 14px;
-    border: 4px solid; border-radius: 10px; background: color-mix(in srgb, var(--card) 70%, transparent);
+    position: absolute; z-index: 5; pointer-events: none; opacity: 0; font-weight: 800; font-size: 24px; letter-spacing: .06em;
+    padding: 4px 12px; border: 4px solid; border-radius: 10px; background: color-mix(in srgb, var(--card) 75%, transparent);
   }
-  .stamp.next { right: 22px; color: var(--go); transform: rotate(14deg); }
-  .stamp.prev { left: 22px; color: var(--muted); transform: rotate(-14deg); }
-
-  .actions { display: flex; gap: 10px; margin-top: 16px; }
-  .actions button {
-    flex: 1; font: inherit; font-weight: 700; font-size: 17px; padding: 16px 8px; border-radius: 16px; cursor: pointer;
-    border: 1px solid var(--line); background: var(--card); color: var(--fg);
-  }
-  .actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1.6; }
+  .stamp.got { top: 44px; left: 20px; color: var(--go); transform: rotate(-14deg); }
+  .stamp.undo { top: 44px; right: 20px; color: var(--muted); transform: rotate(14deg); }
+  .stamp.skip { bottom: 50px; left: 50%; color: var(--warn); transform: translateX(-50%); }
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+  .actions button { flex: 1; font-weight: 750; font-size: 16px; padding: 15px 6px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); }
+  .actions .ok { background: var(--go); border-color: var(--go); color: #fff; flex: 1.3; }
+  .actions .sk { color: var(--warn); }
   .actions button:disabled { opacity: .4; }
-  .tip { text-align: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .tip { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+  /* Summary */
+  .stars { text-align: center; font-size: 52px; letter-spacing: 6px; margin: 10px 0 0; }
+  .stars .off { color: var(--line); }
+  .stars .on { color: var(--gold); display: inline-block; animation: pop .5s backwards; }
+  .stars .on:nth-child(2) { animation-delay: .15s; } .stars .on:nth-child(3) { animation-delay: .3s; }
+  @keyframes pop { from { transform: scale(0) rotate(-40deg); } 70% { transform: scale(1.3); } }
+  .score { text-align: center; font-size: 46px; font-weight: 800; margin: 4px 0 0; }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 6px; }
+  .badge { display: block; width: fit-content; margin: 8px auto 0; background: var(--gold); color: #3a2a00; font-weight: 800; font-size: 13px; padding: 5px 12px; border-radius: 999px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Fiszki <span>🇵🇱</span></h1>
-  <div class="modes" role="group" aria-label="Direction">
-    <button data-mode="mix">Mix</button>
-    <button data-mode="pl">PL→EN</button>
-    <button data-mode="en">EN→PL</button>
+
+<!-- START -->
+<section class="view" id="vStart" hidden>
+  <header><h1>Fiszki <span>🇵🇱</span></h1></header>
+  <div class="scroll">
+    <div class="tiles">
+      <div class="tile"><b id="sStreak">0</b><small>🔥 day streak</small></div>
+      <div class="tile"><b id="sSession">0</b><small>✓ this session</small></div>
+      <div class="tile"><b id="sBest">–</b><small>🏆 best round</small></div>
+    </div>
+    <h2>Direction</h2>
+    <div class="seg" id="modeSeg">
+      <button data-mode="mix">Mix</button>
+      <button data-mode="pl">PL → EN</button>
+      <button data-mode="en">EN → PL</button>
+    </div>
+    <h2>Cards per round</h2>
+    <div class="seg" id="sizeSeg"></div>
+    <h2>Your trouble words</h2>
+    <div id="trouble"></div>
   </div>
-</header>
-<div class="bar"><i id="bar"></i></div>
-<div class="status" id="status">Loading…</div>
-<main>
-  <div class="swiper" id="swiper">
-    <div class="stamp next" id="stampNext">NEXT</div>
-    <div class="stamp prev" id="stampPrev">BACK</div>
-    <div class="card" id="card" role="button" tabindex="0" aria-label="Flip card">
-      <div class="face front">
-        <div class="lang" id="fLang"></div><div class="word" id="fWord"></div><div class="pron" id="fPron"></div>
-        <div class="hint">tap to reveal</div>
-      </div>
-      <div class="face back">
-        <div class="lang" id="bLang"></div><div class="word" id="bWord"></div><div class="pron" id="bPron"></div><div class="note" id="bNote"></div>
+  <div class="cta">
+    <button class="big primary" id="startBtn">Start round</button>
+    <button class="big" id="resumeBtn" hidden></button>
+  </div>
+</section>
+
+<!-- PLAY -->
+<section class="view" id="vPlay" hidden>
+  <header>
+    <button class="icon" id="homeBtn" aria-label="Home">✕</button>
+    <div class="counters">
+      <span class="combo" id="combo"></span>
+      <span class="chip ok" id="cGot" title="Got it this session">✓ 0</span>
+      <span class="chip sk" id="cSkip" title="Not yet this session">↑ 0</span>
+    </div>
+  </header>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="status" id="status"></div>
+  <div class="stage">
+    <div class="swiper" id="swiper">
+      <div class="stamp got" id="stGot">GOT IT</div>
+      <div class="stamp undo" id="stUndo">UNDO</div>
+      <div class="stamp skip" id="stSkip">NOT YET</div>
+      <div class="card" id="card" role="button" tabindex="0" aria-label="Flip card">
+        <div class="face front">
+          <div class="retry" id="retry"></div>
+          <div class="lang" id="fLang"></div><div class="word" id="fWord"></div><div class="pron" id="fPron"></div>
+          <div class="hint">tap to reveal</div>
+        </div>
+        <div class="face back">
+          <div class="lang" id="bLang"></div><div class="word" id="bWord"></div><div class="pron" id="bPron"></div><div class="note" id="bNote"></div>
+        </div>
       </div>
     </div>
+    <div class="actions">
+      <button id="undoBtn" aria-label="Undo">↶ Undo</button>
+      <button id="skipBtn" class="sk">↑ Not yet</button>
+      <button id="gotBtn" class="ok">✓ Got it</button>
+    </div>
+    <div class="tip">Swipe → got it · ↑ not yet · ← undo · tap to flip</div>
   </div>
-  <div class="actions">
-    <button id="prev" aria-label="Previous card">← Back</button>
-    <button id="flip">Flip</button>
-    <button id="next" class="primary">Next →</button>
+</section>
+
+<!-- SUMMARY -->
+<section class="view" id="vSum" hidden>
+  <div class="scroll">
+    <div class="stars" id="stars"></div>
+    <div class="score" id="score"></div>
+    <p class="sub" id="scoreSub"></p>
+    <span class="badge" id="badge" hidden></span>
+    <h2>Round stats</h2>
+    <div class="tiles">
+      <div class="tile"><b id="rGot">0</b><small>✓ first try</small></div>
+      <div class="tile"><b id="rSkip">0</b><small>↑ not yet</small></div>
+      <div class="tile"><b id="rCombo">0</b><small>🔥 best combo</small></div>
+    </div>
+    <h2 id="reviewTitle">Review these</h2>
+    <div id="review"></div>
   </div>
-  <div class="tip">Swipe left for next · swipe right to go back</div>
-</main>
+  <div class="cta">
+    <button class="big primary" id="againBtn">Play again</button>
+    <button class="big" id="sumHomeBtn">Home</button>
+  </div>
+</section>
+
 <script>
 (() => {
-  const STORE = 'fiszki.v1';
+  const STORE = 'fiszki.v2';
+  const SESSION_GAP = 30 * 60 * 1000;   // a new session starts after 30 min of inactivity
+  const SIZES = [10, 20, 30, 50];
   const $ = id => document.getElementById(id);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
   const swiper = $('swiper'), card = $('card');
-  let entries = [], cards = new Map(), state, showingBack = false, busy = false;
+  let entries = [], cards = new Map(), S, showingBack = false, busy = false;
 
-  const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
-  const save = () => localStorage.setItem(STORE, JSON.stringify(state));
+  // ---------- state ----------
+  const defaults = () => ({
+    mode: 'mix', size: 20,
+    cycle: [], cyclePos: 0,          // shuffle-bag over all cards: every card is drawn once per cycle
+    round: null, screen: 'start', last: null,
+    session: { last: 0, got: 0, skip: 0 },
+    stats: { day: null, streak: 0, best: {} },
+    trouble: {},                     // polish word -> how often it was "not yet" (decreases when known first try)
+  });
+  function load() {
+    localStorage.removeItem('fiszki.v1');
+    try { return Object.assign(defaults(), JSON.parse(localStorage.getItem(STORE)) || {}); } catch { return defaults(); }
+  }
+  const save = () => localStorage.setItem(STORE, JSON.stringify(S));
+
+  const dayStr = t => new Date(t).toLocaleDateString('en-CA');
+  const sessionLive = () => Date.now() - S.session.last < SESSION_GAP;
+  function touchSession() {
+    if (!sessionLive()) S.session = { last: 0, got: 0, skip: 0 };
+    S.session.last = Date.now();
+    const today = dayStr(Date.now()), yesterday = dayStr(Date.now() - 864e5);
+    if (S.stats.day !== today) { S.stats.streak = S.stats.day === yesterday ? S.stats.streak + 1 : 1; S.stats.day = today; }
+  }
+  const streakNow = () => [dayStr(Date.now()), dayStr(Date.now() - 864e5)].includes(S.stats.day) ? S.stats.streak : 0;
 
   function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
   }
-
-  // Every card in the current mode, keyed "<dir>|<polish>". Each appears exactly once per round,
-  // so all words have equal probability; rounds repeat forever with a fresh shuffle.
   function keysForMode(mode) {
     const dirs = mode === 'mix' ? ['pl', 'en'] : [mode];
     return entries.flatMap(e => dirs.map(d => `${d}|${e.pl}`));
   }
+  const plOf = key => key.slice(key.indexOf('|') + 1);
+  const roundSize = () => { const n = keysForMode(S.mode).length; return S.size === 'all' ? n : Math.min(S.size, n); };
 
-  function newRound(prevLast) {
-    const bag = shuffle(keysForMode(state.mode));
-    if (bag.length > 1 && bag[0] === prevLast) [bag[0], bag[1]] = [bag[1], bag[0]];
-    state.prevBag = prevLast ? state.bag : null; // lets "back" step into the previous round
-    state.bag = bag; state.pos = 0; state.round = (state.round || 0) + 1;
-  }
-
-  // Keep the current round when the vocabulary list changes: drop removed cards and slot
-  // new ones at random positions in the part of the round not yet seen.
+  // Keep the cycle and any running round valid when the vocabulary list changes; new cards are
+  // slotted into the not-yet-drawn part of the cycle so they show up soon.
   function reconcile() {
-    const valid = new Set(keysForMode(state.mode));
-    if (!Array.isArray(state.bag)) return newRound();
-    const seen = state.bag.slice(0, state.pos).filter(k => valid.has(k));
-    const rest = state.bag.slice(state.pos).filter(k => valid.has(k));
+    const valid = new Set(keysForMode(S.mode));
+    const seen = S.cycle.slice(0, S.cyclePos).filter(k => valid.has(k));
+    const rest = S.cycle.slice(S.cyclePos).filter(k => valid.has(k));
     const known = new Set([...seen, ...rest]);
-    for (const k of valid) if (!known.has(k)) rest.splice(Math.floor(Math.random() * (rest.length + 1)), 0, k);
-    state.bag = [...seen, ...rest]; state.pos = seen.length;
-    if (Array.isArray(state.prevBag)) {
-      state.prevBag = state.prevBag.filter(k => valid.has(k));
-      if (!state.prevBag.length) state.prevBag = null;
+    if (S.cycle.length) for (const k of valid) if (!known.has(k)) rest.splice(Math.floor(Math.random() * (rest.length + 1)), 0, k);
+    S.cycle = [...seen, ...rest]; S.cyclePos = seen.length;
+    if (S.round) {
+      S.round.keys = S.round.keys.filter(k => valid.has(k));
+      S.round.queue = S.round.queue.filter(k => valid.has(k));
+      S.round.history = [];
+      if (!S.round.queue.length) S.round = null;
     }
-    if (state.pos >= state.bag.length) newRound(state.bag[state.bag.length - 1]);
+    if (S.screen === 'play' && !S.round) S.screen = 'start';
+    if (S.screen === 'summary' && !S.last) S.screen = 'start';
   }
 
-  const canGoBack = () => state.pos > 0 || !!state.prevBag;
+  function draw(n) {
+    const all = keysForMode(S.mode), picked = new Set();
+    let guard = all.length * 3;
+    while (picked.size < n && guard--) {
+      if (S.cyclePos >= S.cycle.length) { S.cycle = shuffle([...all]); S.cyclePos = 0; }
+      picked.add(S.cycle[S.cyclePos++]);
+    }
+    return shuffle([...picked]);
+  }
 
-  function render() {
-    const [dir, pl] = state.bag[state.pos].split('|');
-    const e = cards.get(pl);
+  function startRound() {
+    const keys = draw(roundSize());
+    S.round = {
+      keys, queue: [...keys], misses: {}, firstTry: 0, got: 0, skips: 0, combo: 0, bestCombo: 0, history: [],
+      troubleBefore: [...new Set(keys.map(plOf).filter(pl => S.trouble[pl] > 0))],
+    };
+    S.screen = 'play'; save(); show();
+  }
+
+  function finishRound() {
+    const r = S.round, total = r.keys.length;
+    const acc = Math.round((r.firstTry / total) * 100);
+    const prev = S.stats.best[total];
+    S.stats.best[total] = Math.max(prev ?? 0, acc);
+    const fixed = r.troubleBefore.filter(pl => r.keys.some(k => plOf(k) === pl && !r.misses[k])).length;
+    S.last = {
+      total, acc, firstTry: r.firstTry, skips: r.skips, bestCombo: r.bestCombo, fixed,
+      stars: acc >= 90 ? 3 : acc >= 70 ? 2 : acc >= 40 ? 1 : 0,
+      newBest: prev !== undefined && acc > prev,
+      review: Object.entries(r.misses).sort((a, b) => b[1] - a[1]),
+    };
+    S.round = null; S.screen = 'summary';
+  }
+
+  // ---------- rendering ----------
+  function show() {
+    $('vStart').hidden = S.screen !== 'start';
+    $('vPlay').hidden = S.screen !== 'play';
+    $('vSum').hidden = S.screen !== 'summary';
+    if (S.screen === 'start') renderStart();
+    if (S.screen === 'play') { setFlipped(false, true); resetSwiper(); renderPlay(); }
+    if (S.screen === 'summary') renderSummary();
+  }
+
+  const fmtCard = (pl, n) => {
+    const e = cards.get(pl), row = document.createElement('div');
+    const left = document.createElement('span'); left.textContent = e.pl;
+    if (n) { const m = document.createElement('em'); m.textContent = `×${n}`; left.append(m); }
+    const right = document.createElement('i'); right.textContent = e.en;
+    row.append(left, right); return row;
+  };
+
+  function renderStart() {
+    $('sStreak').textContent = streakNow();
+    $('sSession').textContent = sessionLive() ? S.session.got : 0;
+    const best = S.stats.best[roundSize()];
+    $('sBest').textContent = best === undefined ? '–' : best + '%';
+    document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === S.mode));
+    const total = keysForMode(S.mode).length, seg = $('sizeSeg');
+    seg.replaceChildren(...[...SIZES.filter(n => n < total), 'all'].map(n => {
+      const b = document.createElement('button');
+      b.textContent = n === 'all' ? `All (${total})` : n;
+      const active = n === 'all' ? roundSize() === total : S.size === n;
+      b.setAttribute('aria-pressed', active);
+      b.onclick = () => { S.size = n; save(); renderStart(); };
+      return b;
+    }));
+    const hard = Object.entries(S.trouble).filter(([pl, n]) => n > 0 && cards.has(pl)).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const box = $('trouble');
+    if (hard.length) { const l = document.createElement('div'); l.className = 'list'; l.append(...hard.map(([pl, n]) => fmtCard(pl, n))); box.replaceChildren(l); }
+    else { const p = document.createElement('div'); p.className = 'empty'; p.textContent = 'None yet. Words you mark "not yet" show up here until you know them first try.'; box.replaceChildren(p); }
+    $('startBtn').textContent = `Start round · ${roundSize()} cards`;
+    const rb = $('resumeBtn');
+    rb.hidden = !S.round;
+    if (S.round) rb.textContent = `Resume round · ${S.round.queue.length} left`;
+  }
+
+  function renderPlay() {
+    const r = S.round, key = r.queue[0];
+    const dir = key.slice(0, key.indexOf('|')), e = cards.get(plOf(key));
     const plFront = dir === 'pl';
     $('fLang').textContent = plFront ? 'Polish' : 'English';
     $('bLang').textContent = plFront ? 'English' : 'Polish';
@@ -175,117 +350,167 @@
     $('fPron').textContent = plFront && e.pron ? `[ ${e.pron} ]` : '';
     $('bPron').textContent = !plFront && e.pron ? `[ ${e.pron} ]` : '';
     $('bNote').textContent = e.note || '';
-    $('status').textContent = `Round ${state.round} · ${state.pos + 1} / ${state.bag.length} · ${entries.length} words`;
-    $('bar').style.width = `${(state.pos / state.bag.length) * 100}%`;
-    $('prev').disabled = !canGoBack();
-    document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mode));
+    $('retry').textContent = r.misses[key] ? `↻ again` : '';
+    const done = r.keys.length - r.queue.length;
+    $('bar').style.width = `${(done / r.keys.length) * 100}%`;
+    $('status').textContent = `${done} / ${r.keys.length} learned · ${r.queue.length} left`;
+    $('cGot').textContent = `✓ ${S.session.got}`;
+    $('cSkip').textContent = `↑ ${S.session.skip}`;
+    $('combo').textContent = r.combo >= 3 ? `🔥${r.combo}` : '';
+    $('undoBtn').disabled = !r.history.length;
   }
 
+  function renderSummary() {
+    const L = S.last;
+    $('stars').replaceChildren(...[1, 2, 3].map(i => { const s = document.createElement('span'); s.className = i <= L.stars ? 'on' : 'off'; s.textContent = '★'; return s; }));
+    $('score').textContent = `${L.acc}%`;
+    $('scoreSub').textContent = `${L.firstTry} of ${L.total} right first try`;
+    const badge = L.newBest ? '🏆 New personal best!' : L.fixed ? `💪 Fixed ${L.fixed} trouble word${L.fixed > 1 ? 's' : ''}` : '';
+    $('badge').hidden = !badge; $('badge').textContent = badge;
+    $('rGot').textContent = L.firstTry; $('rSkip').textContent = L.skips; $('rCombo').textContent = L.bestCombo;
+    const box = $('review');
+    $('reviewTitle').textContent = L.review.length ? 'Review these' : 'Flawless round';
+    if (L.review.length) { const l = document.createElement('div'); l.className = 'list'; l.append(...L.review.map(([k, n]) => fmtCard(plOf(k), n))); box.replaceChildren(l); }
+    else { const p = document.createElement('div'); p.className = 'empty'; p.textContent = 'Every card right on the first try. 🎉'; box.replaceChildren(p); }
+  }
+
+  // ---------- card motion ----------
   function setFlipped(v, instant) {
     showingBack = v;
     card.classList.toggle('instant', !!instant);
     card.classList.toggle('flipped', v);
     if (instant) { void card.offsetWidth; card.classList.remove('instant'); }
   }
-  function flip() { if (!busy) setFlipped(!showingBack); }
+  const flip = () => { if (!busy) setFlipped(!showingBack); };
 
-  function step(dir) {
-    if (dir > 0) {
-      const last = state.bag[state.pos];
-      state.pos++;
-      if (state.pos >= state.bag.length) newRound(last);
-    } else if (state.pos > 0) {
-      state.pos--;
-    } else if (state.prevBag) {
-      state.bag = state.prevBag; state.prevBag = null;
-      state.pos = state.bag.length - 1; state.round = Math.max(1, state.round - 1);
-    }
-    save();
-  }
-
-  function setDrag(dx, animate) {
+  function setDrag(dx, dy, animate) {
     swiper.classList.toggle('anim', !!animate);
-    swiper.style.transform = dx ? `translateX(${dx}px) rotate(${dx * 0.05}deg)` : '';
-    const t = Math.min(Math.abs(dx) / 100, 1);
-    $('stampNext').style.opacity = dx < 0 ? t : 0;
-    $('stampPrev').style.opacity = dx > 0 ? t : 0;
+    swiper.style.transform = dx || dy ? `translate(${dx}px, ${Math.min(dy, 0)}px) rotate(${dx * 0.05}deg)` : '';
+    const horiz = Math.abs(dx) >= Math.abs(dy);
+    $('stGot').style.opacity = horiz && dx > 0 ? Math.min(dx / 90, 1) : 0;
+    $('stUndo').style.opacity = horiz && dx < 0 && S.round?.history.length ? Math.min(-dx / 90, 1) : 0;
+    $('stSkip').style.opacity = !horiz && dy < 0 ? Math.min(-dy / 90, 1) : 0;
   }
+  function resetSwiper() { swiper.classList.remove('anim'); setDrag(0, 0); swiper.style.opacity = '1'; }
+  const OUT = { got: () => `translate(${innerWidth * 1.3}px, 0) rotate(28deg)`, skip: () => `translate(0, -110vh) rotate(-4deg)` };
 
-  // Tinder-style: fling the current card off-screen (left = next, right = back), then bring the new one in.
-  function go(dir) {
-    if (busy) return;
-    if (dir < 0 && !canGoBack()) { setDrag(0, true); return; }
-    busy = true;
-    const w = window.innerWidth * 1.3;
+  async function flyOut(kind) {
     swiper.classList.add('anim');
-    swiper.style.transform = `translateX(${-dir * w}px) rotate(${-dir * 28}deg)`;
+    swiper.style.transform = OUT[kind]();
     swiper.style.opacity = '0';
-    setTimeout(() => {
-      step(dir);
-      setFlipped(false, true);
-      render();
-      swiper.classList.remove('anim');
-      setDrag(0);
-      swiper.style.transform = 'scale(.92)';
-      void swiper.offsetWidth;
-      swiper.classList.add('anim');
-      swiper.style.transform = '';
-      swiper.style.opacity = '1';
-      busy = false;
-    }, 260);
+    await wait(240);
+  }
+  function enter(from) {
+    swiper.classList.remove('anim');
+    setDrag(0, 0);
+    swiper.style.transform = from;
+    swiper.style.opacity = from.startsWith('scale') ? '0' : '1';
+    void swiper.offsetWidth;
+    swiper.classList.add('anim');
+    swiper.style.transform = '';
+    swiper.style.opacity = '1';
   }
 
-  // Drag handling (touch + mouse via pointer events). A short tap flips the card.
-  let start = null, dx = 0, dragging = false;
+  // ---------- grading ----------
+  const snapshot = kind => JSON.stringify({ round: { ...S.round, history: undefined }, session: S.session, stats: S.stats, trouble: S.trouble, kind });
+
+  async function grade(kind) {           // 'got' | 'skip'
+    if (busy || S.screen !== 'play') return;
+    busy = true;
+    const r = S.round;
+    r.history.push(snapshot(kind)); if (r.history.length > 30) r.history.shift();
+    await flyOut(kind);
+    touchSession();
+    const key = r.queue.shift(), pl = plOf(key);
+    if (kind === 'got') {
+      r.got++; S.session.got++;
+      if (!r.misses[key]) {
+        r.firstTry++; r.combo++; r.bestCombo = Math.max(r.bestCombo, r.combo);
+        if (S.trouble[pl] > 0 && !--S.trouble[pl]) delete S.trouble[pl];
+      }
+    } else {
+      r.skips++; S.session.skip++; r.combo = 0;
+      r.misses[key] = (r.misses[key] || 0) + 1;
+      S.trouble[pl] = (S.trouble[pl] || 0) + 1;
+      // bring it back a few cards later (or right away if it is the only one left)
+      r.queue.splice(Math.min(r.queue.length, 3 + Math.floor(Math.random() * 6)), 0, key);
+    }
+    if (!r.queue.length) { finishRound(); save(); busy = false; resetSwiper(); show(); return; }
+    save();
+    setFlipped(false, true); renderPlay(); enter('scale(.92)');
+    if (kind === 'got' && r.combo >= 3) { $('combo').classList.add('pop'); setTimeout(() => $('combo').classList.remove('pop'), 200); }
+    busy = false;
+  }
+
+  async function undo() {
+    if (busy || S.screen !== 'play') return;
+    const r = S.round;
+    if (!r.history.length) { setDrag(0, 0, true); return; }
+    busy = true;
+    const snap = JSON.parse(r.history.pop()), history = r.history;
+    S.round = { ...snap.round, history }; S.session = snap.session; S.stats = snap.stats; S.trouble = snap.trouble;
+    save();
+    setFlipped(false, true); renderPlay();
+    enter(OUT[snap.kind]());              // the previous card comes back from where it was flung
+    busy = false;
+  }
+
+  // ---------- input ----------
+  let start = null, dx = 0, dy = 0, dragging = false;
   swiper.addEventListener('pointerdown', ev => {
     if (busy) return;
-    start = { x: ev.clientX, y: ev.clientY }; dx = 0; dragging = false;
+    start = { x: ev.clientX, y: ev.clientY }; dx = dy = 0; dragging = false;
     swiper.setPointerCapture(ev.pointerId);
   });
   swiper.addEventListener('pointermove', ev => {
     if (!start) return;
-    dx = ev.clientX - start.x;
-    if (!dragging && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(ev.clientY - start.y)) dragging = true;
-    if (dragging) setDrag(dx);
+    dx = ev.clientX - start.x; dy = ev.clientY - start.y;
+    if (!dragging && Math.hypot(dx, dy) > 8) dragging = true;
+    if (dragging) setDrag(dx, dy);
   });
-  const end = () => {
+  swiper.addEventListener('pointerup', () => {
     if (!start) return;
     start = null;
     if (!dragging) return flip();
-    if (dx < -90) go(1);
-    else if (dx > 90) go(-1);
-    else setDrag(0, true);
-  };
-  swiper.addEventListener('pointerup', end);
-  swiper.addEventListener('pointercancel', () => { start = null; setDrag(0, true); });
+    if (-dy > 90 && -dy > Math.abs(dx)) grade('skip');
+    else if (dx > 90) grade('got');
+    else if (dx < -90) undo();
+    else setDrag(0, 0, true);
+  });
+  swiper.addEventListener('pointercancel', () => { start = null; setDrag(0, 0, true); });
 
-  function setMode(mode) {
-    if (mode === state.mode || busy) return;
-    state.mode = mode; state.round = 0; state.prevBag = null; newRound(); save(); setFlipped(false, true); render();
-  }
-
-  $('flip').addEventListener('click', flip);
-  $('next').addEventListener('click', () => go(1));
-  $('prev').addEventListener('click', () => go(-1));
-  document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  $('gotBtn').onclick = () => grade('got');
+  $('skipBtn').onclick = () => grade('skip');
+  $('undoBtn').onclick = undo;
+  $('homeBtn').onclick = () => { S.screen = 'start'; save(); show(); };
+  $('startBtn').onclick = startRound;
+  $('resumeBtn').onclick = () => { S.screen = 'play'; save(); show(); };
+  $('againBtn').onclick = startRound;
+  $('sumHomeBtn').onclick = () => { S.screen = 'start'; save(); show(); };
+  document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => {
+    if (b.dataset.mode === S.mode) return;
+    S.mode = b.dataset.mode; S.cycle = []; S.cyclePos = 0; S.round = null; save(); renderStart();
+  });
   document.addEventListener('keydown', ev => {
+    if (S.screen !== 'play') return;
     if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); flip(); }
-    if (ev.key === 'ArrowRight') go(1);
-    if (ev.key === 'ArrowLeft') go(-1);
+    if (ev.key === 'ArrowRight') grade('got');
+    if (ev.key === 'ArrowUp') { ev.preventDefault(); grade('skip'); }
+    if (ev.key === 'ArrowLeft') undo();
   });
 
   fetch('vocab.json', { cache: 'no-cache' })
     .then(r => r.json())
     .then(list => {
-      // De-duplicate by Polish word (case-insensitive); later entries never override earlier ones.
+      // De-duplicate by Polish word (case-insensitive); the first occurrence wins.
       const seen = new Set();
       entries = list.filter(e => { const k = e.pl.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
       entries.forEach(e => cards.set(e.pl, e));
-      state = load();
-      if (!['mix', 'pl', 'en'].includes(state.mode)) state.mode = 'mix';
-      reconcile(); save(); render();
+      S = load();
+      if (!['mix', 'pl', 'en'].includes(S.mode)) S.mode = 'mix';
+      reconcile(); save(); show();
     })
-    .catch(() => { $('status').textContent = 'Could not load vocabulary.'; });
+    .catch(() => { document.body.textContent = 'Could not load vocabulary.'; });
 })();
 </script>
 </body>
